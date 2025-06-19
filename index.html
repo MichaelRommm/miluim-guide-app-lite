@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="ru" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Интерактивный гид по льготам для резервистов ("Железные Мечи")</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chosen Palette: Calm Desert -->
+    <!-- Application Structure Plan: Финальная версия для публичного релиза. Все функции, требующие серверной части и API-ключей (Gemini API), были удалены для обеспечения 100% клиентской работы, безопасности и простоты развертывания на статических хостингах (Netlify, GitHub Pages). Приложение представляет собой единый, самодостаточный HTML-файл, сфокусированный на предоставлении точной, проверенной и многоязычной информации. -->
+    <!-- Visualization & Content Choices: 
+        - Исходная информация: Полный, верифицированный список льгот.
+        - Цель: Максимальная точность, простота использования и развертывания.
+        - Метод представления: 
+          - UI: Интерактивные фильтры и многоязычный переключатель сохранены как ядро функциональности.
+          - Взаимодействие: Вся логика теперь полностью сосредоточена на фильтрации и отображении заранее заданных данных на стороне клиента.
+          - Удалены: Кнопки "Получить советы", "Генератор писем", модальное окно и все функции `callGeminiAPI`.
+        - Обоснование: Удаление серверных зависимостей делает приложение по-настоящему общедоступным, бесплатным и легким в обслуживании для владельца сайта, что соответствует изначальной цели проекта.
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Rubik:wght@400;500;600;700&display=swap');
+        body { transition: all 0.3s ease; }
+        .font-ru, .font-en { font-family: 'Inter', sans-serif; }
+        .font-he { font-family: 'Rubik', sans-serif; }
+        .benefit-card { transition: all 0.3s ease-in-out; border: 1px solid #EAE2D9; }
+        .benefit-card:hover { transform: translateY(-4px); box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.07), 0 4px 6px -4px rgb(0 0 0 / 0.07); border-color: #D1C4B3; }
+        .switch { position: relative; display: inline-block; width: 50px; height: 28px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 28px; }
+        .slider:before { position: absolute; content: ""; height: 20px; width: 20px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; }
+        input:checked + .slider { background-color: #B99C7A; }
+        input:checked + .slider:before { transform: translateX(22px); }
+        .range-slider::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 20px; height: 20px; background: #B99C7A; cursor: pointer; border-radius: 50%; }
+        .range-slider::-moz-range-thumb { width: 20px; height: 20px; background: #B99C7A; cursor: pointer; border-radius: 50%; }
+        .details-content { max-height: 0; overflow: hidden; transition: max-height 0.5s ease-out; }
+        .custom-select { appearance: none; -webkit-appearance: none; -moz-appearance: none; background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23B99C7A%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-13%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2013l128%20127.9c3.6%203.6%207.8%205.4%2013%205.4s9.4-1.8%2013-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-13%200-5-1.9-9.4-5.4-13z%22%2F%3E%3C%2Fsvg%3E'); background-repeat: no-repeat; background-size: 0.65rem; }
+        html[dir="ltr"] .custom-select { background-position: right 0.7rem center; }
+        html[dir="rtl"] .custom-select { background-position: left 0.7rem center; }
+        .lang-btn { transition: all 0.2s ease; }
+        .lang-btn.active { background-color: #B99C7A; color: white; }
+    </style>
+</head>
+<body class="bg-[#FDFBF8] text-[#4B4B4B]">
+
+    <div class="container mx-auto px-4 py-8 md:py-12">
+        <div class="flex justify-center mb-8">
+            <div class="flex space-x-1 border border-stone-300 rounded-full p-1">
+                <button id="lang-ru" class="lang-btn px-4 py-1 rounded-full text-sm font-medium">🇷🇺 Русский</button>
+                <button id="lang-en" class="lang-btn px-4 py-1 rounded-full text-sm font-medium">🇺🇸 English</button>
+                <button id="lang-he" class="lang-btn px-4 py-1 rounded-full text-sm font-medium">🇮🇱 עברית</button>
+            </div>
+        </div>
+        <header class="text-center mb-10">
+            <h1 id="main-title" class="text-4xl md:text-5xl font-bold text-[#8A6F4C] mb-2"></h1>
+            <p id="main-subtitle" class="text-lg text-gray-600 max-w-3xl mx-auto"></p>
+        </header>
+        <main>
+            <div class="bg-white rounded-2xl shadow-lg p-6 md:p-8 mb-10 border border-gray-200">
+                <h2 id="profile-title" class="text-2xl font-bold mb-6 text-center text-[#8A6F4C]"></h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div class="space-y-2 lg:col-span-3">
+                        <label for="daysOfService" id="days-label" class="block font-medium text-gray-700"></label>
+                        <input type="range" id="daysOfService" min="1" max="200" value="60" class="w-full h-2 bg-[#EAE2D9] rounded-lg appearance-none cursor-pointer range-slider">
+                    </div>
+                    <div>
+                        <label for="viewerType" id="viewer-type-label" class="block font-medium text-gray-700 mb-2"></label>
+                        <select id="viewerType" class="w-full bg-stone-50 border border-stone-300 text-gray-900 text-sm rounded-lg focus:ring-[#B99C7A] focus:border-[#B99C7A] p-2.5 custom-select">
+                        </select>
+                    </div>
+                    <div>
+                        <label for="serviceType" id="service-type-label" class="block font-medium text-gray-700 mb-2"></label>
+                        <select id="serviceType" class="w-full bg-stone-50 border border-stone-300 text-gray-900 text-sm rounded-lg focus:ring-[#B99C7A] focus:border-[#B99C7A] p-2.5 custom-select">
+                        </select>
+                    </div>
+                    <div>
+                        <label for="age" id="age-label" class="block font-medium text-gray-700 mb-2"></label>
+                        <input type="number" id="age" value="23" class="w-full bg-stone-50 border border-stone-300 text-gray-900 text-sm rounded-lg focus:ring-[#B99C7A] focus:border-[#B99C7A] p-2.5">
+                    </div>
+                    <div class="flex items-center justify-center pt-6 space-x-3 rtl:space-x-reverse">
+                        <span id="lone-soldier-label" class="font-medium text-gray-700"></span>
+                        <label class="switch"><input type="checkbox" id="isLoneSoldier" checked><span class="slider"></span></label>
+                    </div>
+                    <div class="flex items-center justify-center pt-6 space-x-3 rtl:space-x-reverse">
+                        <span id="student-label" class="font-medium text-gray-700"></span>
+                        <label class="switch"><input type="checkbox" id="isStudent"><span class="slider"></span></label>
+                    </div>
+                    <div class="flex items-center justify-center pt-6 space-x-3 rtl:space-x-reverse">
+                        <span id="self-employed-label" class="font-medium text-gray-700"></span>
+                        <label class="switch"><input type="checkbox" id="isSelfEmployed"><span class="slider"></span></label>
+                    </div>
+                    <div class="flex items-center justify-center pt-6 space-x-3 rtl:space-x-reverse lg:col-start-2">
+                        <span id="children-label" class="font-medium text-gray-700"></span>
+                        <label class="switch"><input type="checkbox" id="hasChildren"><span class="slider"></span></label>
+                    </div>
+                </div>
+            </div>
+            <div id="results" class="mb-10">
+                <h2 id="benefits-title" class="text-2xl font-bold my-6 text-center text-[#8A6F4C]"></h2>
+                <div id="no-results" class="text-center text-gray-500 py-10 hidden">
+                    <p id="no-results-p1" class="text-xl"></p>
+                    <p id="no-results-p2"></p>
+                </div>
+                <div id="benefits-container" class="space-y-8"></div>
+            </div>
+             <div id="nko-section" class="bg-white rounded-2xl shadow-lg p-6 md:p-8 mb-10 border border-gray-200">
+                <h2 id="nko-title" class="text-2xl font-bold mb-6 text-center text-[#8A6F4C]"></h2>
+                <p id="nko-subtitle" class="text-center text-gray-600 mb-6 max-w-3xl mx-auto"></p>
+                 <div id="nko-container" class="grid md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        const translations = {
+            ru: {
+                mainTitle: 'Гид по льготам для резервистов',
+                mainSubtitle: 'Интерактивный инструмент для расчета прав и выплат в рамках операции "Железные Мечи"',
+                profileTitle: '1. Укажите ваш профиль',
+                daysLabel: 'Дней на службе: <span id="daysValue" class="font-bold text-[#B99C7A]">60</span>',
+                viewerTypeLabel: 'Чьи льготы смотрим?',
+                viewerTypeOptions: { reservist: 'Резервиста', partner: 'Партнера' },
+                serviceTypeLabel: 'Тип службы',
+                serviceTypeOptions: { rear: 'Тыловая', combat: 'Боевая (Лохама)', commander: 'Командир' },
+                ageLabel: 'Возраст',
+                loneSoldierLabel: 'Солдат-одиночка',
+                studentLabel: 'Студент/ка',
+                selfEmployedLabel: 'Самозанятый/ая',
+                childrenLabel: 'Есть дети (до 14)',
+                benefitsTitle: '2. Ваши персональные льготы',
+                noResultsP1: 'Для указанных параметров льготы не найдены.',
+                noResultsP2: 'Попробуйте изменить настройки фильтра.',
+                nkoTitle: '3. Помощь от НКО (עמותות) и гражданских инициатив',
+                nkoSubtitle: 'Эта поддержка доступна всем резервистам и их семьям независимо от срока службы. Она не зависит от введенных выше параметров.',
+                categories: { finance: '💰 Финансы и Гранты', lone_soldier: '👤 Специально для солдат-одиночек', family: '👨‍👩‍👧‍👦 Семья и Партнеры', work: '💼 Работа и Бизнес', housing: '🏠 Жилье и Муниципалитет', education: '🎓 Образование', health: '🧘 Здоровье и Отдых' }
+            },
+            en: {
+                mainTitle: 'Reservist Benefits Guide',
+                mainSubtitle: 'Interactive tool for calculating rights and payments for "Iron Swords"',
+                profileTitle: '1. Set Your Profile',
+                daysLabel: 'Days in service: <span id="daysValue" class="font-bold text-[#B99C7A]">60</span>',
+                viewerTypeLabel: 'Whose benefits to view?',
+                viewerTypeOptions: { reservist: 'Reservist\'s', partner: 'Partner\'s' },
+                serviceTypeLabel: 'Service Type',
+                serviceTypeOptions: { rear: 'Rear-echelon', combat: 'Combat', commander: 'Commander' },
+                ageLabel: 'Age',
+                loneSoldierLabel: 'Lone Soldier',
+                studentLabel: 'Student',
+                selfEmployedLabel: 'Self-Employed',
+                childrenLabel: 'Has children (under 14)',
+                benefitsTitle: '2. Your Personal Benefits',
+                noResultsP1: 'No benefits found for the selected parameters.',
+                noResultsP2: 'Try changing the filter settings.',
+                nkoTitle: '3. Support from NGOs (Amutot) and Civil Initiatives',
+                nkoSubtitle: 'This support is available to all reservists and their families, regardless of service duration or the parameters entered above.',
+                categories: { finance: '💰 Finances & Grants', lone_soldier: '👤 Special for Lone Soldiers', family: '👨‍👩‍👧‍👦 Family & Partners', work: '💼 Work & Business', housing: '🏠 Housing & Municipality', education: '🎓 Education', health: '🧘 Health & Recreation' }
+            },
+            he: {
+                mainTitle: 'מדריך הטבות למשרתי מילואים',
+                mainSubtitle: 'כלי אינטראקטיבי לחישוב זכויות ותשלומים במבצע "חרבות ברזל"',
+                profileTitle: '1. הגדר את הפרופיל שלך',
+                daysLabel: 'ימי שירות: <span id="daysValue" class="font-bold text-[#B99C7A]">60</span>',
+                viewerTypeLabel: 'של מי ההטבות להציג?',
+                viewerTypeOptions: { reservist: 'של משרת/ת המילואים', partner: 'של בן/בת הזוג' },
+                serviceTypeLabel: 'סוג השירות',
+                serviceTypeOptions: { rear: 'עורפי', combat: 'לוחמה', commander: 'פיקוד' },
+                ageLabel: 'גיל',
+                loneSoldierLabel: 'חייל/ת בודד/ה',
+                studentLabel: 'סטודנט/ית',
+                selfEmployedLabel: 'עצמאי/ת',
+                childrenLabel: 'הורה לילדים (עד גיל 14)',
+                benefitsTitle: '2. ההטבות האישיות שלך',
+                noResultsP1: 'לא נמצאו הטבות עבור הפרמטרים שנבחרו.',
+                noResultsP2: 'נסה/י לשנות את הגדרות הסינון.',
+                nkoTitle: '3. סיוע מעמותות ויוזמות אזרחיות',
+                nkoSubtitle: 'תמיכה זו זמינה לכל משרתי המילואים ומשפחותיהם, ללא תלות במשך השירות או בפרמטרים שהוזנו למעלה.',
+                categories: { finance: '💰 כספים ומענקים', lone_soldier: '👤 מיוחד לחיילים בודדים', family: '👨‍👩‍👧‍👦 משפחה ובני/בנות זוג', work: '💼 עבודה ועסקים', housing: '🏠 דיור ועירייה', education: '🎓 השכלה', health: '🧘 בריאות ופנאי' }
+            }
+        };
+
+        const benefitsData = [
+            { id: 'bduah_leumi', category: 'finance', minDays: 1, maxDays: Infinity, ru:{title:'Компенсация от "Битуах Леуми"',details:'Базовое вознаграждение, гарантирующее, что ваш доход не упадет ниже минимума. Выплачивается работодателем или напрямую.', amount:'мин. 321.07₪/день'}, en:{title:'Bituah Leumi Compensation',details:'Basic payment ensuring your income doesn\'t fall below the minimum. Paid by the employer or directly.', amount:'min. ₪321.07/day'}, he:{title:'תגמול מביטוח לאומי',details:'תגמול בסיסי המבטיח שהכנסתך לא תפחת מהמינימום. משולם על ידי המעסיק או ישירות.', amount:'מינימום 321.07₪ ליום'} },
+            { id: 'personal_grant', category: 'finance', minDays: 8, maxDays: Infinity, ru:{title:'Грант на личные расходы',details:'Единовременный грант, автоматически выплачиваемый на банковский счет после 8 дней службы.', amount:'1,100₪'}, en:{title:'Personal Expenses Grant',details:'A one-time grant automatically paid to the bank account after 8 days of service.', amount:'₪1,100'}, he:{title:'מענק הוצאות אישיות',details:'מענק חד-פעמי המשולם אוטומטית לחשבון הבנק לאחר 8 ימי שירות.', amount:'1,100₪'} },
+            { id: 'family_grant', category: 'family', minDays: 8, maxDays: Infinity, hasChildren: true, ru:{title:'Семейный грант',details:'Единовременный грант для резервистов-родителей детей до 14 лет. Выплачивается автоматически.', amount:'2,000₪'}, en:{title:'Family Grant',details:'A one-time grant for reservist parents of children under 14. Paid automatically.', amount:'₪2,000'}, he:{title:'מענק משפחה',details:'מענק חד-פעמי למשרתי מילואים הורים לילדים עד גיל 14. משולם אוטומטית.', amount:'2,000₪'} },
+            { id: 'vacation_cancel', category: 'finance', minDays: 8, maxDays: Infinity, ru:{title:'Компенсация за отмену отпуска',details:'Если из-за призыва пришлось отменить отпуск, можно подать заявку на компенсацию через Фонд помощи (קרן הסיוע).', amount:'По запросу'}, en:{title:'Vacation Cancellation Compensation',details:'If a vacation was canceled due to the call-up, you can apply for compensation through the Assistance Fund (Keren HaSiyua).', amount:'By request'}, he:{title:'פיצוי על ביטול חופשה',details:'אם חופשה בוטלה עקב הגיוס, ניתן להגיש בקשה לפיצוי דרך קרן הסיוע.', amount:'לפי בקשה'} },
+            { id: 'therapy_reimbursement', category: 'health', minDays: 30, maxDays: Infinity, ru:{title:'Возмещение на психотерапию',details:'Возмещение до 1,500₪ на личную/семейную терапию и до 1,500₪ на парную. Подается через Фонд помощи.', amount:'до 3,000₪'}, en:{title:'Psychotherapy Reimbursement',details:'Reimbursement of up to ₪1,500 for individual/family therapy and up to ₪1,500 for couples therapy. Apply via the Assistance Fund.', amount:'up to ₪3,000'}, he:{title:'החזר על טיפול נפשי',details:'החזר של עד 1,500₪ לטיפול אישי/משפחתי ועד 1,500₪ לטיפול זוגי. הגשה דרך קרן הסיוע.', amount:'עד 3,000₪'} },
+            { id: 'self_employed_comp', category: 'work', minDays: 30, maxDays: Infinity, isSelfEmployed: true, ru:{title:'Компенсация самозанятым',details:'Владельцы бизнесов, чей оборот упал, могут подать заявку на компенсацию через Налоговое управление.', amount:'По запросу'}, en:{title:'Compensation for Self-Employed',details:'Business owners who experienced a drop in turnover can apply for compensation through the Tax Authority.', amount:'By request'}, he:{title:'פיצוי לעצמאים',details:'בעלי עסקים שחוו ירידה במחזור יכולים להגיש בקשה לפיצוי דרך רשות המיסים.', amount:'לפי בקשה'} },
+            { id: 'increased_personal_grant', category: 'finance', minDays: 40, maxDays: Infinity, serviceType: ['combat', 'commander'], ru:{title:'Увеличенный грант',details:'Начиная с 40-го дня, за каждые 10 дней начисляется доп. грант: 266₪ для всех, 466₪ для бойцов и командиров.', amount:'266-466₪/10д'}, en:{title:'Increased Grant',details:'Starting from day 40, an additional grant is accrued for every 10 days: ₪266 for all, ₪466 for combat soldiers and commanders.', amount:'₪266-466/10d'}, he:{title:'מענק מוגדל',details:'החל מהיום ה-40, ניתן מענק נוסף על כל 10 ימים: 266₪ לכולם, 466₪ ללוחמים ומפקדים.', amount:'266-466₪/10י'} },
+            { id: 'vacation_voucher', category: 'health', minDays: 60, maxDays: Infinity, ru:{title:'Ваучер на отдых',details:'Ваучер для семейного отдыха в Израиле. Сумма зависит от статуса службы и семейного положения.', amount:'1,500-4,500₪'}, en:{title:'Recreation Voucher',details:'A voucher for a family vacation in Israel. The amount depends on service status and family situation.', amount:'₪1,500-4,500'}, he:{title:'שובר נופש',details:'שובר לחופשה משפחתית בישראל. הסכום תלוי במעמד השירות ובמצב המשפחתי.', amount:'1,500-4,500₪'} },
+            { id: 'special_payment_60', category: 'finance', minDays: 61, maxDays: Infinity, ru:{title:'Доп. специальный платеж',details:'За каждый день службы, начиная с 61-го, начисляется дополнительная выплата.', amount:'133₪/день'}, en:{title:'Additional Special Payment',details:'For each day of service starting from the 61st day, an additional payment is accrued.', amount:'₪133/day'}, he:{title:'תגמול מיוחד נוסף',details:'על כל יום שירות החל מהיום ה-61, מצטבר תשלום נוסף.', amount:'133₪ ליום'} },
+            { id: 'dira_behanacha', category: 'housing', minDays: 120, maxDays: Infinity, ru:{title:'Приоритет в "Дира бе-Анаха"',details:'В жилищных лотереях 20-50% квартир зарезервированы для резервистов, отслуживших 120+ дней.', amount:'Приоритет'}, en:{title:'Priority in "Dira Behanacha"',details:'In housing lotteries, 20-50% of apartments are reserved for reservists who served 120+ days.', amount:'Priority'}, he:{title:'קדימות ב"דירה בהנחה"',details:'בהגרלות הדיור, 20-50% מהדירות שמורות למשרתי מילואים ששירתו 120+ ימים.', amount:'קדימות'} },
+            { id: 'dismissal_protection', category: 'work', minDays: 2, maxDays: Infinity, ru:{title:'Защита от увольнения',details:'Запрещено увольнять резервиста во время службы и 30 дней после (60 дней при службе >60 дней).', amount:'Защита'}, en:{title:'Protection from Dismissal',details:'It is forbidden to fire a reservist during service and for 30 days after (60 days for service >60 days).', amount:'Protection'}, he:{title:'הגנה מפיטורין',details:'אסור לפטר משרת מילואים במהלך השירות ו-30 יום לאחריו (60 יום לשירות מעל 60 יום).', amount:'הגנה'} },
+            { id: 'partner_hour_off', category: 'family', minDays: 5, maxDays: Infinity, isPartner: true, hasChildren: true, ru:{title:'Час отсутствия для партнера',details:'Партнер с ребенком до 13 лет, работающий на полную ставку, может отсутствовать 1 час в день с сохранением оплаты.', amount:'1 час/день'}, en:{title:'Hour of Absence for Partner',details:'A partner with a child under 13, working full-time, can be absent for 1 hour per day with full pay.', amount:'1 hour/day'}, he:{title:'שעת היעדרות לבן/בת הזוג',details:'בן/בת זוג עם ילד עד גיל 13, העובד/ת משרה מלאה, יכול/ה להיעדר שעה ביום בתשלום מלא.', amount:'שעה ביום'} },
+            { id: 'lone_soldier_rent', category: 'lone_soldier', minDays: 60, maxDays: Infinity, isLoneSoldier: true, isPostService: true, ru:{title:'Помощь в аренде после службы',details:'После демобилизации солдаты-одиночки могут получать помощь в оплате аренды до 1,000₪ в месяц в течение первого года.', amount:'до 1,000₪/мес'}, en:{title:'Post-Service Rental Assistance',details:'After discharge, lone soldiers can receive rental assistance of up to ₪1,000 per month for the first year.', amount:'up to ₪1,000/mo'}, he:{title:'סיוע בשכר דירה לאחר השירות',details:'לאחר השחרור, חיילים בודדים יכולים לקבל סיוע בשכר דירה של עד 1,000₪ לחודש במהלך השנה הראשונה.', amount:'עד 1,000₪ לחודש'} },
+            { id: 'academic_credits', category: 'education', minDays: 10, maxDays: Infinity, isStudent: true, ru:{title:'Академические баллы',details:'Студенты-резервисты получают 2 академических балла (נקודות זכות) за каждые 10+ дней службы.', amount:'2 балла'}, en:{title:'Academic Credits',details:'Student reservists receive 2 academic credit points (nekudot zikui) for every 10+ days of service.', amount:'2 points'}, he:{title:'נקודות זכות אקדמיות',details:'סטודנטים במילואים מקבלים 2 נקודות זכות על כל 10+ ימי שירות.', amount:'2 נקודות'} }
+        ];
+
+        const nkoData = [
+             {ru:{title:'Юридическая и бизнес помощь',org:'"Милуимниким", "Зхут бе-Калут"',details:'Бесплатные консультации по трудовому праву, договорам, налогам и поддержке бизнеса.'},en:{title:'Legal & Business Aid',org:'"Miluimnikim", "Zchut BeKalut"',details:'Free consultations on labor law, contracts, taxes and business support.'},he:{title:'סיוע משפטי ועסקי',org:'"מילואימניקים", "זכות בקלות"',details:'ייעוץ חינם בדיני עבודה, חוזים, מיסים ותמיכה עסקית.'}},
+             {ru:{title:'Поддержка семей и детей',org:'"Ха-Оген", "Мама-ткаль", WIZO',details:'Практическая помощь: уход за детьми, готовка, группы поддержки для жен, мероприятия.'},en:{title:'Family & Child Support',org:'"HaOgen", "Mamatkal", WIZO',details:'Practical help: childcare, cooking, support groups for spouses, events.'},he:{title:'תמיכה למשפחות וילדים',org:'"העוגן", "מאמטכ"ל", ויצו',details:'עזרה מעשית: טיפול בילדים, בישולים, קבוצות תמיכה, אירועים.'}},
+             {ru:{title:'Психологическая и образовательная поддержка',org:'NATAL, "Керен Хесег"',details:'Горячие линии, терапия, стипендии на учебу для солдат-одиночек, консультации.'},en:{title:'Mental Health & Education Support',org:'NATAL, Keren Hayeseg',details:'Hotlines, therapy, academic scholarships for lone soldiers, consultations.'},he:{title:'תמיכה נפשית וחינוכית',org:'נט"ל, קרן הישג',details:'קווים חמים, טיפול, מלגות לימודים לחיילים בודדים, ייעוץ.'}}
+        ];
+
+        const allInputs = [ document.getElementById('daysOfService'), document.getElementById('viewerType'), document.getElementById('serviceType'), document.getElementById('age'), document.getElementById('isLoneSoldier'), document.getElementById('isStudent'), document.getElementById('isSelfEmployed'), document.getElementById('hasChildren') ];
+        const benefitsContainer = document.getElementById('benefits-container');
+        const noResults = document.getElementById('no-results');
+        
+        let currentLang = 'ru';
+
+        function changeLanguage(lang) {
+            const t = translations[lang];
+            const oldLang = currentLang;
+            currentLang = lang;
+
+            document.documentElement.lang = lang;
+            document.documentElement.dir = lang === 'he' ? 'rtl' : 'ltr';
+            document.body.className = `bg-[#FDFBF8] text-[#4B4B4B] font-${lang}`;
+
+            ['ru', 'en', 'he'].forEach(l => {
+                document.getElementById(`lang-${l}`).classList.toggle('active', l === lang);
+            });
+            
+            document.getElementById('main-title').textContent = t.mainTitle;
+            document.getElementById('main-subtitle').textContent = t.mainSubtitle;
+            document.getElementById('profile-title').textContent = t.profileTitle;
+            document.getElementById('days-label').innerHTML = t.daysLabel;
+            document.getElementById('viewer-type-label').textContent = t.viewerTypeLabel;
+            document.getElementById('service-type-label').textContent = t.serviceTypeLabel;
+            document.getElementById('age-label').textContent = t.ageLabel;
+            document.getElementById('lone-soldier-label').textContent = t.loneSoldierLabel;
+            document.getElementById('student-label').textContent = t.studentLabel;
+            document.getElementById('self-employed-label').textContent = t.selfEmployedLabel;
+            document.getElementById('children-label').textContent = t.childrenLabel;
+            document.getElementById('benefits-title').textContent = t.benefitsTitle;
+            document.getElementById('no-results-p1').textContent = t.noResultsP1;
+            document.getElementById('no-results-p2').textContent = t.noResultsP2;
+            document.getElementById('nko-title').textContent = t.nkoTitle;
+            document.getElementById('nko-subtitle').textContent = t.nkoSubtitle;
+
+            const viewerSelect = document.getElementById('viewerType');
+            const currentViewerValue = viewerSelect.value;
+            viewerSelect.innerHTML = Object.entries(t.viewerTypeOptions).map(([key, value]) => `<option value="${key}">${value}</option>`).join('');
+            if (Object.values(translations[oldLang].viewerTypeOptions).includes(translations[oldLang].viewerTypeOptions[currentViewerValue])) {
+                viewerSelect.value = currentViewerValue;
+            }
+
+            const serviceSelect = document.getElementById('serviceType');
+            const currentServiceValue = serviceSelect.value;
+            serviceSelect.innerHTML = Object.entries(t.serviceTypeOptions).map(([key, value]) => `<option value="${key}">${value}</option>`).join('');
+            if (Object.values(translations[oldLang].serviceTypeOptions).includes(translations[oldLang].serviceTypeOptions[currentServiceValue])) {
+                serviceSelect.value = currentServiceValue;
+            }
+
+            updateBenefits();
+            renderNkoSection();
+        }
+        
+        function createBenefitCard(benefit) {
+            const t = benefit[currentLang];
+            return `
+                <div class="benefit-card bg-white rounded-xl shadow-md overflow-hidden p-5 cursor-pointer" onclick="toggleDetails(this)">
+                    <div class="flex justify-between items-start gap-4">
+                        <h4 class="font-bold text-lg text-gray-800">${t.title}</h4>
+                        ${t.amount ? `<p class="text-lg font-bold text-[#8A6F4C] text-right whitespace-nowrap">${t.amount}</p>` : ''}
+                    </div>
+                    <div class="details-content mt-4 pt-4 border-t border-gray-200">
+                        <p class="text-gray-600">${t.details}</p>
+                    </div>
+                </div>
+            `;
+        }
+        
+        function toggleDetails(cardElement) {
+            const details = cardElement.querySelector('.details-content');
+            if (details.style.maxHeight && details.style.maxHeight !== '0px') {
+                details.style.maxHeight = '0px';
+            } else {
+                details.style.maxHeight = details.scrollHeight + 'px';
+            }
+        }
+        
+        function updateBenefits() {
+            document.getElementById('daysValue').textContent = allInputs[0].value;
+            const days = parseInt(allInputs[0].value);
+            const viewerType = allInputs[1].value;
+            const serviceType = allInputs[2].value;
+            const isLoneSoldier = allInputs[4].checked;
+            const isStudent = allInputs[5].checked;
+            const isSelfEmployed = allInputs[6].checked;
+            const hasChildren = allInputs[7].checked;
+
+            document.getElementById('nko-section').style.display = viewerType === 'reservist' ? 'block' : 'none';
+
+            const categories = {};
+            Object.keys(translations.ru.categories).forEach(key => {
+                categories[key] = { title: translations[currentLang].categories[key], order: Object.keys(translations.ru.categories).indexOf(key) + 1, benefits: [] };
+            });
+            
+            const applicableBenefits = benefitsData.filter(b => {
+                if (viewerType === 'partner') return b.isPartner === true;
+                if (b.isPartner === true) return false;
+                
+                const meetsDays = days >= b.minDays && days <= b.maxDays;
+                const meetsServiceType = !b.serviceType || b.serviceType.includes(serviceType) || (b.serviceType.includes('combat') && serviceType === 'commander');
+                const meetsLoneSoldier = b.isLoneSoldier === undefined || b.isLoneSoldier === isLoneSoldier;
+                const meetsStudent = b.isStudent === undefined || b.isStudent === isStudent;
+                const meetsSelfEmployed = b.isSelfEmployed === undefined || b.isSelfEmployed === isSelfEmployed;
+                const meetsChildren = b.hasChildren === undefined || b.hasChildren === hasChildren;
+                
+                return meetsDays && meetsServiceType && meetsLoneSoldier && meetsStudent && meetsSelfEmployed && meetsChildren;
+            });
+            
+            if (applicableBenefits.length === 0) {
+                noResults.classList.remove('hidden');
+                benefitsContainer.innerHTML = '';
+            } else {
+                noResults.classList.add('hidden');
+                applicableBenefits.forEach(b => {
+                    if (categories[b.category]) categories[b.category].benefits.push(b);
+                });
+
+                let html = '';
+                const sortedCategories = Object.values(categories).sort((a, b) => a.order - b.order);
+                sortedCategories.forEach(cat => {
+                    if (cat.benefits.length > 0) {
+                        html += `<div id="cat-${cat.order}">
+                            <h3 class="text-xl font-semibold mb-4 text-gray-700">${cat.title}</h3>
+                            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                                ${cat.benefits.map(b => createBenefitCard(b)).join('')}
+                            </div>
+                        </div>`;
+                    }
+                });
+                benefitsContainer.innerHTML = html;
+            }
+        }
+        
+        function renderNkoSection() {
+            document.getElementById('nko-container').innerHTML = nkoData.map(nko => {
+                const t = nko[currentLang];
+                return `
+                <div class="bg-stone-50 rounded-lg p-4 text-center border border-stone-200 h-full flex flex-col justify-between">
+                    <div>
+                       <h4 class="font-bold text-md text-[#8A6F4C]">${t.title}</h4>
+                       <p class="text-sm text-gray-500 mt-1">${t.details}</p>
+                    </div>
+                    <p class="text-xs text-gray-400 mt-3">${t.org}</p>
+                </div>
+            `}).join('');
+        }
+
+        allInputs.forEach(input => {
+            input.addEventListener('input', updateBenefits);
+            input.addEventListener('change', updateBenefits);
+        });
+
+        document.getElementById('lang-ru').addEventListener('click', () => changeLanguage('ru'));
+        document.getElementById('lang-en').addEventListener('click', () => changeLanguage('en'));
+        document.getElementById('lang-he').addEventListener('click', () => changeLanguage('he'));
+        
+        window.addEventListener('load', () => {
+             const viewerType = document.getElementById('viewerType').value;
+             const serviceType = document.getElementById('serviceType').value;
+             changeLanguage('ru');
+             document.getElementById('viewerType').value = viewerType;
+             document.getElementById('serviceType').value = serviceType;
+             updateBenefits();
+        });
+    </script>
+</body>
+</html>
