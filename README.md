@@ -4,7 +4,9 @@
 
 # Miluim Guide - Reservist Benefits Guide (English)
 
-This is a non-commercial, open-source project created to help IDF reservists ("Miluimnikim") and their families easily understand the benefits and rights they are entitled to during their service.
+This is a non-commercial project created and owned by **Whale Group - [whale.co.il](https://whale.co.il) - בית תוכנה**. The information is updated weekly.
+
+This project was created to help IDF reservists ("Miluimnikim") and their families easily understand the benefits and rights they are entitled to during their service.
 
 ## Why this project exists
 
@@ -26,7 +28,9 @@ This is a public repository. If you'd like to improve the application, you can d
 
 # Гид по льготам для резервистов (Русский)
 
-Это некоммерческий проект с открытым исходным кодом, созданный, чтобы помочь резервистам ЦАХАЛа ("милуимникам") и их семьям легко разобраться в льготах и правах, которые им полагаются.
+Это некоммерческий проект, который был создан и принадлежит **Whale Group - [whale.co.il](https://whale.co.il) - בית תוכנה**. Информация обновляется еженедельно.
+
+Этот проект создан, чтобы помочь резервистам ЦАХАЛа ("милуимникам") и их семьям легко разобраться в льготах и правах, которые им полагаются.
 
 ## Зачем нужен этот проект
 
@@ -48,7 +52,9 @@ This is a public repository. If you'd like to improve the application, you can d
 
 # מדריך הטבות למשרתי מילואים (עברית)
 
-זהו פרויקט קוד פתוח ללא מטרות רווח, שנוצר כדי לעזור למשרתי המילואים בצה"ל ("מילואימניקים") ולמשפחותיהם להבין בקלות את ההטבות והזכויות המגיעות להם.
+זהו פרויקט לא מסחרי שנוצר ושייך ל-**Whale Group - [whale.co.il](https://whale.co.il) - בית תוכנה**. המידע מתעדכן מדי שבוע.
+
+פרויקט זה נוצר כדי לעזור למשרתי המילואים בצה"ל ("מילואימניקים") ולמשפחותיהם להבין בקלות את ההטבות והזכויות המגיעות להם.
 
 ## למה הפרויקט הזה קיים
 
